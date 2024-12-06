@@ -1,40 +1,50 @@
-//@version=5
+//@version=6
 strategy("OKX Grid Trading Strategy", overlay=true)
 
 // 输入参数
-priceRangeLow = input(30000.0, title="Price Range Low")
-priceRangeHigh = input(40000.0, title="Price Range High")
-gridCount = input(10, title="Grid Count")
-gridMode = input("Arithmetic", title="Grid Mode", options=["Arithmetic", "Geometric"])
-takeProfitPrice = input(priceRangeHigh * 0.9, title="Take Profit Price")
-stopLossPrice = input(priceRangeLow * 0.9, title="Stop Loss Price")
+priceRangeLow = input.float(30000.0, title="价格区间最低价")
+priceRangeHigh = input.float(40000.0, title="价格区间最高价")
+gridCount = input.int(10, title="网格数量")
+gridMode = input.string("Arithmetic", title="网格模式", options=["Arithmetic", "Geometric"])
+takeProfitPrice = input.float(0.0, title="止盈价格")  // 先设置为0，后面会计算
+stopLossPrice = input.float(0.0, title="止损价格")    // 先设置为0，后面会计算
+
+// 计算止盈和止损价格
+calculatedTakeProfitPrice = priceRangeHigh * 0.9
+calculatedStopLossPrice = priceRangeLow * 0.9
 
 // 计算网格大小
 gridSizeArithmetic = (priceRangeHigh - priceRangeLow) / gridCount
-gridSizeGeometric = pow(priceRangeHigh / priceRangeLow),(1 / gridCount)) - 1
+gridSizeGeometric = math.pow(priceRangeHigh / priceRangeLow, 1.0 / gridCount) - 1
 
 // 计算网格价格
-gridPrices = na
+var float[] gridPrices = na
 if (gridMode == "Arithmetic")
-    gridPrices = array.from(0.0, gridCount + 1)
+    gridPrices := array.new_float(gridCount + 1)
     for i = 0 to gridCount
-        gridPrices[i] := priceRangeLow + i * gridSizeArithmetic
+        array.set(gridPrices, i, priceRangeLow + i * gridSizeArithmetic)
 else
-    gridPrices = array.from(0.0, gridCount + 1)
+    gridPrices := array.new_float(gridCount + 1)
     for i = 0 to gridCount
-        gridPrices[i] := priceRangeLow * pow((1 + gridSizeGeometric),i)
+        array.set(gridPrices, i, priceRangeLow * math.pow(1 + gridSizeGeometric, i))
 
 // 交易逻辑
-for i = 0 to gridCount - 1
-    if (close[1] < gridPrices[i] and close >= gridPrices[i + 1])
-        strategy.entry("Buy " + str.tostring(i), strategy.long, comment="Grid Buy at " + str.tostring(gridPrices[i]))
-        strategy.exit("Take Profit " + str.tostring(i), "Buy " + str.tostring(i), limit=takeProfitPrice, comment="Take Profit at " + str.tostring(takeProfitPrice))
-        strategy.exit("Stop Loss " + str.tostring(i), "Buy " + str.tostring(i), stop=stopLossPrice, comment="Stop Loss at " + str.tostring(stopLossPrice))
-    else if (close[1] > gridPrices[i] and close <= gridPrices[i + 1])
-        strategy.entry("Sell " + str.tostring(i), strategy.short, comment="Grid Sell at " + str.tostring(gridPrices[i]))
-        strategy.exit("Take Profit " + str.tostring(i), "Sell " + str.tostring(i), limit=stopLossPrice, comment="Take Profit at " + str.tostring(stopLossPrice))
-        strategy.exit("Stop Loss " + str.tostring(i), "Sell " + str.tostring(i), stop=takeProfitPrice, comment="Stop Loss at " + str.tostring(takeProfitPrice))
+inRange = close >= priceRangeLow and close <= priceRangeHigh
+if (inRange)
+    for i = 0 to gridCount - 1
+        if (close[1] < array.get(gridPrices, i) and close >= array.get(gridPrices, i + 1))
+            strategy.entry("Buy " + str.tostring(i), strategy.long, comment="Grid Buy at " + str.tostring(array.get(gridPrices, i)))
+            strategy.exit("Take Profit " + str.tostring(i), "Buy " + str.tostring(i), limit=calculatedTakeProfitPrice, comment="止盈价格：" + str.tostring(calculatedTakeProfitPrice))
+            strategy.exit("Stop Loss " + str.tostring(i), "Buy " + str.tostring(i), stop=calculatedStopLossPrice, comment="止损价格：" + str.tostring(calculatedStopLossPrice))
+        else if (close[1] > array.get(gridPrices, i) and close <= array.get(gridPrices, i + 1))
+            strategy.entry("Sell " + str.tostring(i), strategy.short, comment="Grid Sell at " + str.tostring(array.get(gridPrices, i)))
+            strategy.exit("Take Profit " + str.tostring(i), "Sell " + str.tostring(i), limit=calculatedStopLossPrice, comment="止盈价格：" + str.tostring(calculatedStopLossPrice))
+            strategy.exit("Stop Loss " + str.tostring(i), "Sell " + str.tostring(i), stop=calculatedTakeProfitPrice, comment="止损价格：" + str.tostring(calculatedTakeProfitPrice))
+else
+    // 超出价格区间，平掉所有持仓
+    strategy.close_all(comment="超出价格区间")
 
 // 绘制网格价格
-for i = 0 to gridCount
-    hline(gridPrices[i], color=color.new(color.red, 90), linewidth=1, dash=shapepattern.solid)
+// for i = 0 to gridCount
+//     price = array.get(gridPrices, i)
+//     plot(price, color=color.new(color.red, 90), linewidth=1, style=plot.style_stepline, title="Grid Price " + str.tostring(i))

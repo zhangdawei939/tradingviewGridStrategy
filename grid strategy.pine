@@ -1,0 +1,40 @@
+//@version=5
+strategy("OKX Grid Trading Strategy", overlay=true)
+
+// 输入参数
+priceRangeLow = input(30000.0, title="Price Range Low")
+priceRangeHigh = input(40000.0, title="Price Range High")
+gridCount = input(10, title="Grid Count")
+gridMode = input("Arithmetic", title="Grid Mode", options=["Arithmetic", "Geometric"])
+takeProfitPrice = input(priceRangeHigh * 0.9, title="Take Profit Price")
+stopLossPrice = input(priceRangeLow * 0.9, title="Stop Loss Price")
+
+// 计算网格大小
+gridSizeArithmetic = (priceRangeHigh - priceRangeLow) / gridCount
+gridSizeGeometric = pow(priceRangeHigh / priceRangeLow),(1 / gridCount)) - 1
+
+// 计算网格价格
+gridPrices = na
+if (gridMode == "Arithmetic")
+    gridPrices = array.from(0.0, gridCount + 1)
+    for i = 0 to gridCount
+        gridPrices[i] := priceRangeLow + i * gridSizeArithmetic
+else
+    gridPrices = array.from(0.0, gridCount + 1)
+    for i = 0 to gridCount
+        gridPrices[i] := priceRangeLow * pow((1 + gridSizeGeometric),i)
+
+// 交易逻辑
+for i = 0 to gridCount - 1
+    if (close[1] < gridPrices[i] and close >= gridPrices[i + 1])
+        strategy.entry("Buy " + str.tostring(i), strategy.long, comment="Grid Buy at " + str.tostring(gridPrices[i]))
+        strategy.exit("Take Profit " + str.tostring(i), "Buy " + str.tostring(i), limit=takeProfitPrice, comment="Take Profit at " + str.tostring(takeProfitPrice))
+        strategy.exit("Stop Loss " + str.tostring(i), "Buy " + str.tostring(i), stop=stopLossPrice, comment="Stop Loss at " + str.tostring(stopLossPrice))
+    else if (close[1] > gridPrices[i] and close <= gridPrices[i + 1])
+        strategy.entry("Sell " + str.tostring(i), strategy.short, comment="Grid Sell at " + str.tostring(gridPrices[i]))
+        strategy.exit("Take Profit " + str.tostring(i), "Sell " + str.tostring(i), limit=stopLossPrice, comment="Take Profit at " + str.tostring(stopLossPrice))
+        strategy.exit("Stop Loss " + str.tostring(i), "Sell " + str.tostring(i), stop=takeProfitPrice, comment="Stop Loss at " + str.tostring(takeProfitPrice))
+
+// 绘制网格价格
+for i = 0 to gridCount
+    hline(gridPrices[i], color=color.new(color.red, 90), linewidth=1, dash=shapepattern.solid)

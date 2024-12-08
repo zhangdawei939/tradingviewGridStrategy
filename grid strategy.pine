@@ -1,10 +1,25 @@
 //@version=5
-// 适用 btcUSDT 2小时 和 黄金159934  4h
+// 适用 btcUSDT 2小时 和 黄金159934 2h 
+// 所有级别 均展示2h 50ma均线
 
-strategy("GRID", overlay=true, pyramiding=10, close_entries_rule='ANY', initial_capital=20000, commission_value=0.05)
+strategy("GRID gold", overlay=true, pyramiding=10, close_entries_rule='ANY', initial_capital=100000, commission_value=0.05)
+
+// 用户输入，选择时间框架
+// timeframe = input.timeframe("30", "选择时间框架", options=["30","60", "120", "240"])
+currentTimeframe = timeframe.period
+// 根据选择的时间框架设置均线周期
+ma_length = switch currentTimeframe
+    "120" => 50  // 2小时均线 2h 50 ema
+    "240" => 25  // 4小时均线 4h 25 ema
+    "60"  => 100  // 1小时均线 1h 100ema
+    "30"  => 200  // 30min 200ema
+    => 50  // 默认均线周期
+
+// 计算均线
+
+
 
 // 输入设置
-ma_length = input.int(60, title='ma length', group='ma setting', step=10)
 std = input.float(0.05, title='up and down', group='grid', step=0.01)
 grid = input.int(5, title='grid num', maxval=15)
 
@@ -19,39 +34,40 @@ for i = 0 to grid - 1 by 1
     array.push(grid_array, lower_bound + grid_width * i)
 
 var order_array = array.new_bool(grid, false)
+var float current_base = na  // 当前底线网格
 
-// 进场加仓条件
 // 进场加仓条件
 for i = 0 to grid - 1 by 1
     // 当下穿网格时，加仓
     if close < array.get(grid_array, i) and not array.get(order_array, i)
         buy_id = i
         array.set(order_array, buy_id, true)
-        qty = strategy.initial_capital / (grid - 1) // 计算每次买入的数量
-        strategy.entry(id=str.tostring(buy_id), direction=strategy.long, qty=qty, comment='B-' + str.tostring(buy_id))
+        qty = strategy.initial_capital / (grid - 1)/close // 计算每次买入的数量
+        strategy.entry(id=str.tostring(buy_id), direction=strategy.long, qty=qty, comment='B' + str.tostring(buy_id))
         alert("进场买入")
-
+        current_base := array.get(grid_array, buy_id)  // 设置当前底线为买入的网格
     
     // 上穿网格时卖出
     if close > array.get(grid_array, i) and array.get(order_array, i)
+    	current_base
         sell_id = i
         array.set(order_array, sell_id, false)
-        strategy.close(id=str.tostring(sell_id), comment='S-' + str.tostring(sell_id))
+        strategy.close(id=str.tostring(sell_id), comment='S' + str.tostring(sell_id))
         alert("卖出")
 
 // 绘制网格线
-plot(grid > 0 ? array.get(grid_array, 0) : na, color=#ffeb3b92)
-plot(grid > 1 ? array.get(grid_array, 1) : na, color=#ffeb3b92)
-plot(grid > 2 ? array.get(grid_array, 2) : na, color=#ffeb3b92)
-plot(grid > 3 ? array.get(grid_array, 3) : na, color=#ffeb3b92)
-plot(grid > 4 ? array.get(grid_array, 4) : na, color=#ffeb3b92)
-plot(grid > 5 ? array.get(grid_array, 5) : na, color=#ffeb3b92)
-plot(grid > 6 ? array.get(grid_array, 6) : na, color=#ffeb3b92)
-plot(grid > 7 ? array.get(grid_array, 7) : na, color=#ffeb3b92)
-plot(grid > 8 ? array.get(grid_array, 8) : na, color=#ffeb3b92)
-plot(grid > 9 ? array.get(grid_array, 9) : na, color=#ffeb3b92)
-plot(grid > 10 ? array.get(grid_array, 10) : na, color=#ffeb3b92)
-plot(grid > 11 ? array.get(grid_array, 11) : na, color=#ffeb3b92)
-plot(grid > 12 ? array.get(grid_array, 12) : na, color=#ffeb3b92)
-plot(grid > 13 ? array.get(grid_array, 13) : na, color=#ffeb3b92)
-plot(grid > 14 ? array.get(grid_array, 14) : na, color=#ffeb3b92)
+plot(grid > 0 ? array.get(grid_array, 0) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 1 ? array.get(grid_array, 1) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 2 ? array.get(grid_array, 2) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 3 ? array.get(grid_array, 3) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 4 ? array.get(grid_array, 4) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 5 ? array.get(grid_array, 5) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 6 ? array.get(grid_array, 6) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 7 ? array.get(grid_array, 7) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 8 ? array.get(grid_array, 8) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 9 ? array.get(grid_array, 9) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 10 ? array.get(grid_array, 10) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 11 ? array.get(grid_array, 11) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 12 ? array.get(grid_array, 12) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 13 ? array.get(grid_array, 13) : na, color=#9a8c2243,style = plot.style_circles)
+plot(grid > 14 ? array.get(grid_array, 14) : na, color=#9a8c2243,style = plot.style_circles)

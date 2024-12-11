@@ -9,11 +9,12 @@ strategy("GRID gold", overlay=true, pyramiding=10, close_entries_rule='ANY', ini
 currentTimeframe = timeframe.period
 // 根据选择的时间框架设置均线周期
 ma_length = switch currentTimeframe
-    "120" => 50  // 2小时均线 2h 50 ema
-    "240" => 25  // 4小时均线 4h 25 ema
-    "60"  => 100  // 1小时均线 1h 100ema
-    "30"  => 200  // 30min 200ema
+    "120" => 50  // 2小时均线 2h 50 ema 3个
+    "240" => 33  // 4小时均线 4h 25 ema 2个k线
+    "60"  => 100  // 1小时均线 1h 100ema 6个K线
+    "30"  => 167  // 30min 200ema  10个k线
     => 50  // 默认均线周期
+
 
 // 计算均线
 

@@ -13,6 +13,7 @@ ma_length = switch currentTimeframe
     "240" => 33  // 4小时均线 4h 25 ema 2个k线
     "60"  => 100  // 1小时均线 1h 100ema 6个K线
     "30"  => 167  // 30min 200ema  10个k线
+    "15"  => 550 //15min 33个K线
     => 50  // 默认均线周期
 
 
